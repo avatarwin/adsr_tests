@@ -1,2 +1,6 @@
 indent_style = "visual"
 tab_spaces = 2
+format_strings = true
+reorder_imports = true
+space_after_colon = true
+spaces_within_parens_and_brackets = true
