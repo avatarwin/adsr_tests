@@ -132,6 +132,10 @@ mod tests {
     // overshoot test
 
     assert_approx_eq!( lerp_cl( 110.0, start, end, out1, out2 ), 0.99 );
+
+    // undershoot test
+
+    assert_approx_eq!( lerp_cl( 0.1, start, end, out1, out2 ), 0.01 );
   }
 
   #[test]
