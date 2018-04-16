@@ -1,5 +1,6 @@
 indent_style = "visual"
 tab_spaces = 2
+brace_style = "PreferSameLine"
 format_strings = true
 reorder_imports = true
 space_after_colon = true
