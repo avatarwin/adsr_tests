@@ -15,6 +15,27 @@ pub mod adsr {
     release: f64,
   }
 
+  // unclamped lerp...
+  pub fn lerp( input: f64, x1: f64, x2: f64, y1: f64, y2: f64 ) -> f64 {
+    let x_range = x2 - x1;
+    let y_range = y2 - y1;
+    y1 + ( ( input - x1 ) / x_range * y_range )
+  }
+
+  //clamped lerp
+  pub fn lerp_cl( input: f64, x1: f64, x2: f64, y1: f64, y2: f64 ) -> f64 {
+    let x_range = x2 - x1;
+    let y_range = y2 - y1;
+    let out = y1 + ( ( ( input - x1 ) / x_range ) * y_range );
+    if out < y1 {
+      y1
+    } else if out > y2 {
+      y2
+    } else {
+      out
+    }
+  }
+
   impl Envelope {
     pub fn new() -> Envelope {
       return Envelope { triggered: None,
@@ -49,27 +70,6 @@ pub mod adsr {
       self.release = release;
     }
 
-    // unclamped lerp...
-    fn lerp( input: f64, x1: f64, x2: f64, y1: f64, y2: f64 ) -> f64 {
-      let x_range = x2 - x1;
-      let y_range = y2 - y1;
-      y1 + ( ( input - x1 ) / x_range * y_range )
-    }
-
-    //clamped lerp
-    fn lerp_cl( input: f64, x1: f64, x2: f64, y1: f64, y2: f64 ) -> f64 {
-      let x_range = x2 - x1;
-      let y_range = y2 - y1;
-      let out = y1 + ( ( ( input - x1 ) / x_range ) * y_range );
-      if out < y1 {
-        y1
-      } else if out > y2 {
-        y2
-      } else {
-        out
-      }
-    }
-
     pub fn get_value( &self, time: f64 ) -> f64 {
       match self.triggered {
         None => 0.0, // If the envelope is off, then return 0.0 always
@@ -93,6 +93,46 @@ pub mod adsr {
 mod tests {
 
   use adsr::Envelope;
+  use adsr::{lerp, lerp_cl};
+
+  #[test]
+  fn lerp_test1() {
+    let start = 1.0;
+    let end = 99.0;
+    let out1 = 0.01;
+    let out2 = 0.99;
+
+    assert_approx_eq!( lerp( 1.0, start, end, out1, out2 ), 0.01 );
+    assert_approx_eq!( lerp( 50.0, start, end, out1, out2 ), 0.50 );
+    assert_approx_eq!( lerp( 99.0, start, end, out1, out2 ), 0.99 );
+
+    // overshoot test
+
+    assert_approx_eq!( lerp( 110.0, start, end, out1, out2 ), 1.10 );
+
+    // undershoot test...
+    assert_approx_eq!( lerp( 0.1, start, end, out1, out2 ), 0.001 );
+
+    // negative undershoot?
+    assert_approx_eq!( lerp( -1.0, start, end, out1, out2 ), -0.01 );
+  }
+
+  // clamped lerp tests...
+  #[test]
+  fn lerp_test2() {
+    let start = 1.0;
+    let end = 99.0;
+    let out1 = 0.01;
+    let out2 = 0.99;
+
+    assert_approx_eq!( lerp_cl( 1.0, start, end, out1, out2 ), 0.01 );
+    assert_approx_eq!( lerp_cl( 50.0, start, end, out1, out2 ), 0.50 );
+    assert_approx_eq!( lerp_cl( 99.0, start, end, out1, out2 ), 0.99 );
+
+    // overshoot test
+
+    assert_approx_eq!( lerp_cl( 110.0, start, end, out1, out2 ), 0.99 );
+  }
 
   #[test]
   fn fresh_envelope_test1() {
