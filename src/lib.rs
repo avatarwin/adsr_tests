@@ -5,10 +5,20 @@
 
 pub struct Envelope {
   triggered: Option< f64 >,
+  released: Option< f64 >,
   attack: f64,
   decay: f64,
   sustain: f64,
   release: f64,
+}
+
+enum EnvelopeStage {
+  Untriggered,
+  Attack,
+  Decay,
+  Sustain,
+  Release,
+  PostRelease,
 }
 
 // unclamped lerp...
@@ -32,9 +42,41 @@ pub fn lerp_cl( input: f64, x1: f64, x2: f64, y1: f64, y2: f64 ) -> f64 {
   }
 }
 
+fn get_trigger_time( env: &Envelope ) -> f64 {
+  match env.triggered {
+    None => 0.0,
+    Some( time ) => time,
+  }
+}
+
+fn get_envelope_stage( env: &Envelope, time: f64 ) -> EnvelopeStage {
+  match env.triggered {
+    None => EnvelopeStage::Untriggered,
+    Some( trigger_time ) => match env.released {
+      None => {
+        if time < ( trigger_time + env.attack ) {
+          return EnvelopeStage::Attack;
+        } else if time < ( trigger_time + env.attack + env.decay ) {
+          return EnvelopeStage::Decay;
+        } else {
+          return EnvelopeStage::Sustain;
+        }
+      }
+      Some( release_time ) => {
+        if ( time - release_time ) < env.release {
+          return EnvelopeStage::Release;
+        } else {
+          return EnvelopeStage::PostRelease;
+        }
+      }
+    },
+  }
+}
+
 impl Envelope {
   pub fn new() -> Envelope {
     return Envelope { triggered: None,
+                      released: None,
                       attack: 0.0,
                       decay: 0.0,
                       sustain: 1.0,
@@ -43,6 +85,7 @@ impl Envelope {
 
   pub fn new_adsr( attack: f64, decay: f64, sustain: f64, release: f64 ) -> Envelope {
     return Envelope { triggered: None,
+                      released: None,
                       attack: attack,
                       decay: decay,
                       sustain: sustain,
@@ -75,15 +118,18 @@ impl Envelope {
   }
 
   pub fn get_value( &self, time: f64 ) -> f64 {
-    match self.triggered {
-      None => 0.0, // If the envelope is off, then return 0.0 always
-      Some( value ) => {
-        if time >= value {
-          1.0
-        } else {
-          0.0
-        }
+    let stage = get_envelope_stage( self, time );
+    let trig = get_trigger_time( self );
+
+    match stage {
+      EnvelopeStage::Untriggered => 0.0,
+      EnvelopeStage::Attack => lerp_cl( time - trig, 0.0, self.attack, 0.0, 1.0 ),
+      EnvelopeStage::Decay => lerp_cl( time - trig, self.attack, self.decay, 1.0, self.sustain ),
+      EnvelopeStage::Sustain => self.sustain,
+      EnvelopeStage::Release => {
+        lerp_cl( time /* - rel */, 0.0, self.release, self.sustain, 0.0 )
       }
+      EnvelopeStage::PostRelease => 0.0,
     }
   }
 
