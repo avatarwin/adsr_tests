@@ -3,5 +3,9 @@ name = "adsr_tests"
 version = "0.1.0"
 authors = ["avatarwin <nicola.archibald@gmail.com>"]
 
+[lib]
+name="adsr"
+path="src/lib.rs"
+
 [dependencies]
 assert_approx_eq = "*"
